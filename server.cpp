@@ -13,6 +13,20 @@
 
 #pragma comment(lib, "Ws2_32.lib")
 
+static void readAndWrite(const SOCKET socket) {
+    char readBuffer[64]{};
+
+    if (const int bytesRead{recv(socket, readBuffer, sizeof(readBuffer) - 1, 0)}; bytesRead < 0) {
+        std::cout << "error reading from socket: " << WSAGetLastError() << '\n';
+        return;
+    }
+
+    std::cout << "client says: " << readBuffer << '\n';
+
+    constexpr char writeBuffer[]{"world"};
+    send(socket, writeBuffer, sizeof(writeBuffer) - 1, 0);
+}
+
 int main() {
     WSADATA wsaData;
     if (WSAStartup(MAKEWORD(2, 2), &wsaData) != 0) {
@@ -54,7 +68,25 @@ int main() {
         std::cout << "listen failed with error: " << WSAGetLastError() << '\n';
     }
 
-    std::cout << "listening on socket...\n";
+
+    while (true) {
+        std::cout << "listening on socket...\n";
+
+        sockaddr_in clientAddress{};
+        socklen_t clientAddressLength = sizeof(clientAddress);
+
+        SOCKET clientSocket{accept(listenSocket, reinterpret_cast<SOCKADDR *>(&clientAddress), &clientAddressLength)};
+
+        if (clientSocket == INVALID_SOCKET) {
+            std::cout << "accept failed with error: " << WSAGetLastError() << '\n';
+            continue;
+        }
+
+        std::cout << "Accepted connection from " << inet_ntoa(clientAddress.sin_addr) << ':' << ntohs(clientAddress.sin_port) << '\n';
+
+        readAndWrite(clientSocket);
+        closesocket(clientSocket);
+    }
 
     closesocket(listenSocket);
     WSACleanup();
