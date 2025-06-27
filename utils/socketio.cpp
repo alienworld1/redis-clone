@@ -6,6 +6,10 @@ int32_t SocketIO::readFull(const SOCKET socket, char* buffer, int size) {
         const int bytesRead{recv(socket, buffer, size, 0)};
         if (bytesRead <= 0) {
             // error or unexpected EOF
+            if (errno == EINTR) {
+                // interrupted by signal, retry
+                continue;
+            }
             return -1;
         }
         assert(bytesRead <= size);
